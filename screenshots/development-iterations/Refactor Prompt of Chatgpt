@@ -1,0 +1,634 @@
+You are an ELITE senior full-stack developer, product architect, TypeScript engineer, and AI coding agent.
+
+Your task is to COMPLETELY REFACTOR my existing Resume Tailor web application from a broken “resume upload / paste raw resume text” model into a production-ready “Master Profile Data → Job Description → Template → Tailored Resume Export” system.
+
+This must be a real implementation, not a prototype.
+
+============================================================
+ABSOLUTE RULES
+============================================================
+
+1. Write COMPLETE working code.
+2. No placeholders.
+3. No TODO comments.
+4. No “add logic here”.
+5. No fake buttons.
+6. No unused UI.
+7. No dead code.
+8. No skipped imports.
+9. No partial files.
+10. No explanation instead of implementation.
+11. Do not keep the old resume upload or paste-resume workflow anywhere.
+12. The app must compile and run after your changes.
+13. The PDF download must actually generate a PDF.
+14. The DOCX download must actually generate a Word document.
+15. Optional sections must not appear in the resume if empty.
+16. Never invent user facts.
+17. Tailoring may rewrite wording, reorder content, and improve relevance, but it must not fabricate companies, schools, dates, certifications, skills, degrees, projects, or metrics.
+18. Before finishing, run the project build/lint/typecheck if available and fix all errors.
+
+============================================================
+CURRENT PROBLEM
+============================================================
+
+The current app asks for:
+- Job description
+- Resume upload or pasted resume text
+
+The generated output is wrong because it treats the resume as one giant unstructured text blob and dumps everything into a messy paragraph.
+
+You must remove that architecture completely.
+
+The new architecture must use structured “Master Profile Data”.
+
+============================================================
+NEW PRODUCT FLOW
+============================================================
+
+The app must work like this:
+
+Step 1: User creates a Master Profile using structured forms.
+Step 2: User pastes a Job Description.
+Step 3: User selects a resume template.
+Step 4: App generates a tailored ATS-friendly resume preview.
+Step 5: User downloads the tailored resume as PDF and DOCX.
+
+============================================================
+REQUIRED MASTER PROFILE SCHEMA
+============================================================
+
+Create strict TypeScript types/interfaces.
+
+Use this schema as the source of truth:
+
+type ResumeProfile = {
+  personal: PersonalInfo;
+  summary: ProfileSummary;
+  education: EducationEntry[];
+  experience: ExperienceEntry[];
+  projects: ProjectEntry[];
+  skills: SkillsProfile;
+  certifications: CertificationEntry[];
+  volunteerWork: VolunteerEntry[];
+  awards: AwardEntry[];
+  languages: LanguageEntry[];
+};
+
+type PersonalInfo = {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  portfolioUrl?: string;
+};
+
+type ProfileSummary = {
+  targetRole?: string;
+  about: string;
+  yearsOfExperience?: string;
+};
+
+type EducationEntry = {
+  id: string;
+  institution: string;
+  degree: string;
+  fieldOfStudy: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  location?: string;
+  grade?: string;
+  relevantCoursework?: string[];
+  achievements?: string[];
+};
+
+type ExperienceEntry = {
+  id: string;
+  jobTitle: string;
+  company: string;
+  location?: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  description?: string;
+  bullets: string[];
+  technologies?: string[];
+};
+
+type ProjectEntry = {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string[];
+  githubUrl?: string;
+  demoUrl?: string;
+  bullets: string[];
+};
+
+type SkillsProfile = {
+  programmingLanguages: string[];
+  frameworksLibraries: string[];
+  toolsPlatforms: string[];
+  databases: string[];
+  cloudDevOps: string[];
+  cybersecurity?: string[];
+  machineLearning?: string[];
+  softSkills: string[];
+};
+
+type CertificationEntry = {
+  id: string;
+  name: string;
+  issuer: string;
+  dateEarned?: string;
+  credentialUrl?: string;
+};
+
+type VolunteerEntry = {
+  id: string;
+  role: string;
+  organization: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+  bullets?: string[];
+};
+
+type AwardEntry = {
+  id: string;
+  title: string;
+  issuer?: string;
+  date?: string;
+  description?: string;
+};
+
+type LanguageEntry = {
+  id: string;
+  language: string;
+  proficiency: string;
+};
+
+type ResumeTemplateId = "classic-ats" | "modern-clean" | "technical-engineer";
+
+type TailoredResume = {
+  personal: PersonalInfo;
+  headline?: string;
+  summary: string;
+  education: TailoredEducationEntry[];
+  experience: TailoredExperienceEntry[];
+  projects: TailoredProjectEntry[];
+  skills: TailoredSkillsProfile;
+  certifications: CertificationEntry[];
+  volunteerWork: VolunteerEntry[];
+  awards: AwardEntry[];
+  languages: LanguageEntry[];
+  templateId: ResumeTemplateId;
+};
+
+Create these types in a dedicated file, for example:
+src/types/resume.ts
+
+============================================================
+REQUIRED COMPONENT ARCHITECTURE
+============================================================
+
+Refactor the UI into clean reusable components.
+
+Use a structure similar to:
+
+src/app/tailor/page.tsx
+src/components/resume/ResumeTailorApp.tsx
+src/components/resume/StepIndicator.tsx
+src/components/resume/ProfileForm.tsx
+src/components/resume/PersonalInfoForm.tsx
+src/components/resume/SummaryForm.tsx
+src/components/resume/EducationSection.tsx
+src/components/resume/ExperienceSection.tsx
+src/components/resume/ProjectsSection.tsx
+src/components/resume/SkillsSection.tsx
+src/components/resume/CertificationsSection.tsx
+src/components/resume/VolunteerSection.tsx
+src/components/resume/AwardsSection.tsx
+src/components/resume/LanguagesSection.tsx
+src/components/resume/JobDescriptionStep.tsx
+src/components/resume/TemplateSelector.tsx
+src/components/resume/ResumePreview.tsx
+src/components/resume/DownloadButtons.tsx
+src/lib/resume/defaultProfile.ts
+src/lib/resume/validation.ts
+src/lib/resume/tailoring.ts
+src/lib/resume/exportPdf.ts
+src/lib/resume/exportDocx.ts
+src/lib/resume/formatters.ts
+src/app/api/tailor-resume/route.ts
+
+If the existing project structure differs, adapt cleanly, but keep the separation of concerns.
+
+============================================================
+STATE MANAGEMENT REQUIREMENTS
+============================================================
+
+Use React state properly.
+
+The main app state must include:
+
+const [currentStep, setCurrentStep] = useState(1);
+const [profile, setProfile] = useState<ResumeProfile>(defaultProfile);
+const [jobDescription, setJobDescription] = useState("");
+const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplateId>("classic-ats");
+const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null);
+const [isGenerating, setIsGenerating] = useState(false);
+const [errors, setErrors] = useState<Record<string, string>>({});
+
+Dynamic sections must support:
+- Add education
+- Remove education
+- Edit education
+- Add experience
+- Remove experience
+- Edit experience
+- Add project
+- Remove project
+- Edit project
+- Add certification
+- Remove certification
+- Add volunteer work
+- Remove volunteer work
+- Add award
+- Remove award
+- Add language
+- Remove language
+
+Use stable IDs with crypto.randomUUID() when available, with safe fallback.
+
+Do not mutate arrays directly. Use immutable updates.
+
+============================================================
+VALIDATION RULES
+============================================================
+
+Implement validation in src/lib/resume/validation.ts.
+
+Profile validation:
+- fullName is required.
+- email is required and must look like a valid email.
+- at least one of education, experience, or projects must exist with meaningful data.
+- about section is recommended but not required.
+- empty optional fields should not block generation.
+
+Job description validation:
+- job description is required.
+- minimum 100 characters recommended.
+- show a friendly warning if too short.
+
+Template validation:
+- template must be selected.
+
+Dynamic entry validation:
+- Education must have institution and degree if the entry exists.
+- Experience must have company and jobTitle if the entry exists.
+- Project must have name and description if the entry exists.
+
+Edge cases:
+- If optional URLs are empty, do not render them.
+- If bullet arrays are empty, do not render blank bullets.
+- If a section has no meaningful entries, hide it.
+- Prevent generation when required fields are missing.
+- Show clear inline validation messages.
+
+============================================================
+TAILORING ENGINE LOGIC
+============================================================
+
+Create deterministic local tailoring logic in src/lib/resume/tailoring.ts.
+
+It must work even without OpenAI.
+
+The local tailoring engine must:
+1. Extract important keywords from the job description.
+2. Score experience, projects, skills, education, and certifications against those keywords.
+3. Reorder sections based on relevance.
+4. Reorder skills so most relevant skills appear first.
+5. Rewrite summary using truthful user-provided data.
+6. Keep content ATS-friendly.
+7. Never invent missing facts.
+
+Implement helper functions:
+- normalizeText(text: string): string
+- extractKeywords(jobDescription: string): string[]
+- scoreTextAgainstKeywords(text: string, keywords: string[]): number
+- rankExperience(entries, keywords)
+- rankProjects(entries, keywords)
+- rankSkills(skills, keywords)
+- createTruthfulSummary(profile, keywords, jobDescription)
+- buildTailoredResume(profile, jobDescription, templateId): TailoredResume
+
+Keyword extraction should remove common stop words and prioritize:
+- job title words
+- technical skills
+- tools
+- frameworks
+- certifications
+- domain words
+- repeated terms from job description
+
+If OPENAI_API_KEY exists:
+- Create /api/tailor-resume route.
+- Send structured profile JSON, job description, and selected template.
+- System prompt must strictly prohibit fabrication.
+- AI response must return JSON matching TailoredResume.
+- Validate and sanitize the AI response.
+- If AI fails or returns invalid JSON, fallback to deterministic local tailoring.
+- Do not crash the UI.
+
+The API must never return raw unformatted paragraphs as the final resume.
+
+============================================================
+AI ROUTE REQUIREMENTS
+============================================================
+
+Create or update:
+src/app/api/tailor-resume/route.ts
+
+Behavior:
+- Accept POST body:
+{
+  profile: ResumeProfile,
+  jobDescription: string,
+  templateId: ResumeTemplateId
+}
+
+- Validate input.
+- If no OPENAI_API_KEY, return deterministic fallback.
+- If OPENAI_API_KEY exists, call OpenAI.
+- Force JSON output.
+- Parse response safely.
+- Return TailoredResume JSON.
+- On error, return fallback plus warning.
+
+The AI system message must include:
+- You are tailoring a resume from structured user-provided facts.
+- You may improve wording, reorder content, and emphasize relevant details.
+- You must not invent companies, schools, degrees, dates, skills, certifications, awards, or metrics.
+- You must keep all content ATS-friendly.
+- Return valid JSON only.
+- Match the provided TailoredResume schema exactly.
+
+============================================================
+DOCUMENT EXPORT REQUIREMENTS
+============================================================
+
+Implement real PDF and DOCX export.
+
+Use actual libraries:
+- PDF: jspdf OR @react-pdf/renderer
+- DOCX: docx
+- File saving: file-saver if needed
+
+Choose the best approach for this codebase and install packages if missing.
+
+PDF requirements:
+- Must generate a real downloadable .pdf
+- Must include selected template styling
+- Must include all populated resume sections
+- Must avoid blank optional sections
+- Must handle page breaks cleanly
+- Must format bullets correctly
+- Must render links as text if clickable links are difficult
+
+DOCX requirements:
+- Must generate a real downloadable .docx
+- Must be editable in Microsoft Word / Google Docs
+- Must include section headings
+- Must include bullets
+- Must include contact info
+- Must hide empty sections
+- Must preserve selected template styling as much as practical
+
+Create:
+src/lib/resume/exportPdf.ts
+src/lib/resume/exportDocx.ts
+
+Functions:
+export async function exportResumeToPdf(resume: TailoredResume): Promise<void>
+export async function exportResumeToDocx(resume: TailoredResume): Promise<void>
+
+Download file names:
+FirstName_LastName_Tailored_Resume.pdf
+FirstName_LastName_Tailored_Resume.docx
+
+Sanitize filename safely.
+
+============================================================
+RESUME PREVIEW REQUIREMENTS
+============================================================
+
+ResumePreview must render the tailored resume in a polished ATS-friendly layout.
+
+Common rules:
+- Single-column layout.
+- Name at top.
+- Contact line below.
+- Section headings uppercase.
+- Bullets under experience/projects.
+- Dates aligned or clearly shown.
+- Links visible.
+- No giant paragraphs.
+- No empty headings.
+- No broken spacing.
+
+Template 1: Classic ATS
+- Minimal
+- Black text
+- Clear headings
+- Very ATS-safe
+
+Template 2: Modern Clean
+- Slightly more visual
+- Better spacing
+- Professional style
+- Still ATS-safe
+
+Template 3: Technical / Software Engineer
+- Prioritize skills and projects
+- Show technologies clearly
+- Strong for CS/software roles
+
+============================================================
+UI REQUIREMENTS
+============================================================
+
+The UI must be clean and premium.
+
+Use:
+- step indicator
+- card layout
+- responsive grid
+- clear section titles
+- add/remove buttons
+- inline validation
+- disabled generate button while loading
+- loading state while generating
+- success state after generation
+- download buttons only after tailored resume exists
+
+Do not use ugly default browser forms only.
+Do not create a confusing massive single page if step navigation is better.
+
+Suggested steps:
+1. Master Profile
+2. Job Description
+3. Template
+4. Preview & Export
+
+============================================================
+FORM UX DETAILS
+============================================================
+
+For dynamic arrays:
+- Each entry should be in its own card.
+- Add button at bottom of each section.
+- Remove button on each entry.
+- Use textarea for descriptions and bullets.
+- For bullets, allow one bullet per line and convert to string[].
+- For skills, allow comma-separated or line-separated input and convert to arrays.
+- Trim whitespace.
+- Remove empty array items.
+
+For dates:
+- Use text input or month input.
+- Support Present via checkbox.
+- If Present is checked, endDate should show “Present”.
+
+============================================================
+DATA CLEANING REQUIREMENTS
+============================================================
+
+Implement utilities:
+- splitLinesToArray(text)
+- splitCommaOrLineSeparated(text)
+- cleanStringArray(arr)
+- hasMeaningfulEducation(entry)
+- hasMeaningfulExperience(entry)
+- hasMeaningfulProject(entry)
+- formatDateRange(startDate, endDate, isCurrent)
+- formatContactLine(personal)
+
+Never render:
+- undefined
+- null
+- empty arrays
+- empty bullet points
+- blank optional headings
+
+============================================================
+BACKWARD COMPATIBILITY
+============================================================
+
+Remove:
+- resume upload input
+- resume paste textarea
+- sample resume cards that replace pasted resume
+- any parsing logic based on raw resume text
+
+Keep or improve:
+- job description textarea
+- analyze/generate flow
+- download buttons if existing, but fix them if broken
+- app branding
+
+============================================================
+ERROR HANDLING
+============================================================
+
+Handle:
+- Missing API key
+- AI API failure
+- Invalid AI JSON
+- Empty job description
+- Empty required profile fields
+- Empty optional sections
+- PDF export failure
+- DOCX export failure
+
+Show user-friendly messages in UI.
+
+The app must never silently fail.
+
+============================================================
+TESTING CHECKLIST
+============================================================
+
+After implementation, test this exact scenario:
+
+User enters:
+- Full name
+- Email
+- GitHub
+- LinkedIn
+- About section
+- One education entry
+- One experience entry
+- One project entry
+- Skills
+- One certification optional
+
+Then user pastes a software engineer job description.
+Then user selects Technical / Software Engineer template.
+Then user generates resume.
+Expected:
+- Preview appears with clean sections.
+- Skills are reordered by job relevance.
+- Project appears if relevant.
+- Optional empty sections are hidden.
+- PDF downloads correctly.
+- DOCX downloads correctly.
+- No raw unstructured resume paragraph appears.
+
+Also test:
+- Missing name shows validation error.
+- Missing job description shows validation error.
+- Empty optional certifications do not appear.
+- No OPENAI_API_KEY still generates deterministic resume.
+- API failure falls back gracefully.
+
+============================================================
+FINAL RESPONSE FORMAT
+============================================================
+
+When done, respond with:
+
+1. Summary of what was changed.
+2. Exact files modified/created.
+3. Packages installed.
+4. Commands to run.
+5. How to test.
+6. Any environment variables needed.
+7. Confirmation that:
+   - old resume upload/paste was removed
+   - structured Master Profile model was added
+   - PDF export works
+   - DOCX export works
+   - fallback tailoring works without OpenAI
+   - build/typecheck passes
+
+============================================================
+QUALITY BAR
+============================================================
+
+This should feel like a real SaaS resume tailoring product, not a class assignment.
+
+The final code must be:
+- typed
+- modular
+- maintainable
+- responsive
+- production-ready
+- free of placeholders
+- free of fake functionality
+- free of lazy shortcuts
+
+Start by inspecting the existing codebase. Then refactor carefully. Do not stop until the app fully implements the new architecture.
